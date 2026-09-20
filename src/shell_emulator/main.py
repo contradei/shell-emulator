@@ -1,8 +1,16 @@
 import getpass
 import socket
+from enum import Enum
 
 from src.shell_emulator.config import parse_arguments
 from src.shell_emulator.parser import parse_command
+
+
+class CommandStatus(Enum):
+
+    SUCCESS = "success"
+    ERROR = "error"
+    EXIT = "exit"
 
 
 def create_prompt():
@@ -16,26 +24,66 @@ def create_prompt():
 def execute_command(args):
 
     if not args:
-        return True
+        return CommandStatus.SUCCESS
 
     command = args[0]
     arguments = args[1:]
 
     if command == "exit":
-        return False
+        return CommandStatus.EXIT
 
     if command == "ls":
         print("Команда: ls")
         print(f"Аргументы: {arguments}")
-        return True
+        return CommandStatus.SUCCESS
 
     if command == "cd":
         print("Команда: cd")
         print(f"Аргументы: {arguments}")
-        return True
+        return CommandStatus.SUCCESS
 
     print(f"Ошибка: неизвестная команда '{command}'")
-    return True
+    return CommandStatus.ERROR
+
+
+def run_startup_script(path):
+
+    try:
+        with open(path, encoding="utf-8") as script:
+            for line_number, line in enumerate(script, start=1):
+                command = line.strip()
+
+                if not command:
+                    continue
+
+                print(f"{create_prompt()}{command}")
+
+                args = parse_command(command)
+
+                if args is None:
+                    print(
+                        f"Ошибка startup-скрипта: строка "
+                        f"{line_number}"
+                    )
+                    return CommandStatus.ERROR
+
+                status = execute_command(args)
+
+                if status == CommandStatus.ERROR:
+                    print(
+                        f"Ошибка startup-скрипта: строка "
+                        f"{line_number}"
+                    )
+                    return CommandStatus.ERROR
+
+                if status == CommandStatus.EXIT:
+                    return CommandStatus.EXIT
+
+    except OSError as error:
+        print(f"Ошибка открытия startup-скрипта: {error}")
+        return CommandStatus.ERROR
+
+    return CommandStatus.SUCCESS
 
 
 def main():
@@ -44,6 +92,12 @@ def main():
 
     print(f"VFS: {config.vfs}")
     print(f"Script: {config.script}")
+
+    if config.script:
+        status = run_startup_script(config.script)
+
+        if status == CommandStatus.EXIT:
+            return
 
     while True:
         prompt = create_prompt()
@@ -54,7 +108,9 @@ def main():
         if args is None:
             continue
 
-        if not execute_command(args):
+        status = execute_command(args)
+
+        if status == CommandStatus.EXIT:
             break
 
 
