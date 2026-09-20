@@ -4,6 +4,7 @@ import getpass
 import socket
 from enum import Enum
 
+from src.shell_emulator.config import parse_arguments
 from src.shell_emulator.parser import parse_command
 
 
@@ -27,7 +28,7 @@ def execute_stub(arguments, command):
     return CommandStatus.success
 
 
-def execute_command(args):
+def execute_command(args, vfs=None):
     """Выполняет команду текущего этапа."""
     if not args:
         return CommandStatus.success
@@ -40,15 +41,15 @@ def execute_command(args):
     return CommandStatus.error
 
 
-def execute_line(command):
+def execute_line(command, vfs=None):
     """Разбирает строку и возвращает результат выполнения."""
     args = parse_command(command)
     if args is None:
         return CommandStatus.error
-    return execute_command(args)
+    return execute_command(args, vfs)
 
 
-def run_interactive_mode():
+def run_interactive_mode(vfs=None):
     """Читает команды до exit, EOF или прерывания пользователем."""
     while True:
         try:
@@ -56,13 +57,43 @@ def run_interactive_mode():
         except (EOFError, KeyboardInterrupt):
             print()
             return
-        if execute_line(command) == CommandStatus.exit:
+        if execute_line(command, vfs) == CommandStatus.exit:
             return
 
 
+def run_startup_script(path, vfs=None):
+    """Показывает ввод/вывод; останавливается на первой ошибке."""
+    try:
+        with open(path, encoding="utf-8-sig") as script:
+            for line_number, line in enumerate(script, start=1):
+                command = line.strip()
+                if not command:
+                    continue
+                print(f"{create_prompt()}{command}")
+                status = execute_line(command, vfs)
+                if status == CommandStatus.error:
+                    print(f"Ошибка startup-скрипта: строка {line_number}")
+                if status != CommandStatus.success:
+                    return status
+    except (OSError, UnicodeError) as error:
+        print(f"Ошибка чтения startup-скрипта: {error}")
+        return CommandStatus.error
+    return CommandStatus.success
+
+
 def main():
-    """Запускает интерактивный эмулятор."""
-    run_interactive_mode()
+    """Печатает конфигурацию, выполняет startup, затем запускает REPL."""
+    config = parse_arguments()
+    print(f"VFS: {config.vfs}")
+    print(f"Script: {config.script}")
+    vfs = None
+    if config.script:
+        status = run_startup_script(config.script, vfs)
+        if status == CommandStatus.error:
+            return 1
+        if status == CommandStatus.exit:
+            return 0
+    run_interactive_mode(vfs)
     return 0
 
 

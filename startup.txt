@@ -1,0 +1,4 @@
+ls
+cd "my folder"
+ls
+exit

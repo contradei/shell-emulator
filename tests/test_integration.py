@@ -2,6 +2,8 @@
 
 import contextlib
 import io
+import subprocess
+import sys
 import unittest
 from unittest.mock import patch
 
@@ -24,3 +26,39 @@ class TestInterface(unittest.TestCase):
                              main.CommandStatus.success)
             self.assertEqual(main.execute_line("cd ."),
                              main.CommandStatus.success)
+
+
+class TestParameters(unittest.TestCase):
+    """Проверяет argparse, пути с пробелами и startup-вывод."""
+
+    def test_parameters(self):
+        """Оба параметра сохраняют полное значение пути."""
+        from src.shell_emulator.config import parse_arguments
+
+        with patch.object(sys, "argv", ["shell", "--vfs", "my vfs.xml",
+                                        "--script", "my script.txt"]):
+            config = parse_arguments()
+        self.assertEqual(config.vfs, "my vfs.xml")
+        self.assertEqual(config.script, "my script.txt")
+
+    def test_invalid_parameter(self):
+        """Неизвестный параметр и отсутствие значения дают код 2."""
+        for arguments in (["--unknown"], ["--vfs"], ["--script"]):
+            result = subprocess.run(
+                [sys.executable, "-m", "src.shell_emulator.main", *arguments],
+                input="", text=True, capture_output=True, timeout=10,
+            )
+            self.assertEqual(result.returncode, 2)
+
+    def test_startup_success(self):
+        """Успешный startup показывает ввод и вывод, затем exit."""
+        result = subprocess.run(
+            [sys.executable, "-m", "src.shell_emulator.main", "--script",
+             "scripts/startup_basic.txt"], input="", text=True,
+            capture_output=True, timeout=10,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("VFS:", result.stdout)
+        self.assertIn("Script:", result.stdout)
+        self.assertIn("$ ls", result.stdout)
+        self.assertIn("$ exit", result.stdout)

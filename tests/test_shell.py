@@ -4,7 +4,9 @@ import contextlib
 import io
 import subprocess
 import sys
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from src.shell_emulator import main
@@ -51,3 +53,68 @@ class TestShell(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertNotIn("Traceback", result.stderr)
+
+
+class TestStartup(unittest.TestCase):
+    """Проверяет успешное выполнение и остановку startup."""
+
+    def run_script(self, content):
+        """Выполняет временный скрипт и возвращает вывод и статус."""
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "startup with spaces.txt"
+            path.write_text(content, encoding="utf-8")
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                status = main.run_startup_script(path)
+            return status, output.getvalue()
+
+    def test_script_error(self):
+        """Ошибка останавливает скрипт до следующей команды."""
+        status, output = self.run_script("bad\nnever_run\n")
+        self.assertEqual(status, main.CommandStatus.error)
+        self.assertIn("bad", output)
+        self.assertIn("1", output)
+        self.assertNotIn("never_run", output)
+
+    def test_script_parse_error(self):
+        """Незакрытые кавычки останавливают скрипт."""
+        status, output = self.run_script('"broken\nnever_run\n')
+        self.assertEqual(status, main.CommandStatus.error)
+        self.assertNotIn("never_run", output)
+
+    def test_script_exit(self):
+        """Exit прекращает обработку, пустые строки разрешены."""
+        status, output = self.run_script("\nexit\nnever_run\n")
+        self.assertEqual(status, main.CommandStatus.exit)
+        self.assertIn("exit", output)
+        self.assertNotIn("never_run", output)
+
+    def test_script_empty(self):
+        """Пустой скрипт считается успешным."""
+        status, output = self.run_script("\n")
+        self.assertEqual(status, main.CommandStatus.success)
+        self.assertEqual(output, "")
+
+    def test_script_cli_error(self):
+        """Ошибка startup даёт ненулевой код и не запускает REPL."""
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "bad.txt"
+            path.write_text("bad\n", encoding="utf-8")
+            result = subprocess.run(
+                [sys.executable, "-m", "src.shell_emulator.main",
+                 "--script", str(path)], input="never_run\nexit\n",
+                capture_output=True, text=True, timeout=10,
+            )
+        self.assertEqual(result.returncode, 1)
+        self.assertNotIn("never_run", result.stdout)
+
+    def test_script_unreadable(self):
+        """Отсутствие и неверная кодировка дают управляемую ошибку."""
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "bad.txt"
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(main.run_startup_script(path),
+                                 main.CommandStatus.error)
+                path.write_bytes(b"\xff\xfe\xff")
+                self.assertEqual(main.run_startup_script(path),
+                                 main.CommandStatus.error)
