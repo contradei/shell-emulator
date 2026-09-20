@@ -6,6 +6,10 @@ from enum import Enum
 
 from src.shell_emulator.config import parse_arguments
 from src.shell_emulator.parser import parse_command
+from src.shell_emulator.vfs import VirtualFileSystem, VfsError
+
+
+single_argument = 1
 
 
 class CommandStatus(Enum):
@@ -21,24 +25,42 @@ def create_prompt():
     return f"{getpass.getuser()}@{socket.gethostname()}:~$ "
 
 
-def execute_stub(arguments, command):
-    """Показывает имя и аргументы команды-заглушки."""
-    print(f"Команда: {command}")
-    print(f"Аргументы: {arguments}")
+def execute_ls(arguments, vfs):
+    """Выводит содержимое каталога, с владельцами для -l."""
+    if arguments not in ([], ["-l"]):
+        raise VfsError("используйте ls или ls -l")
+    for node in vfs.list_directory():
+        print(f"{node.owner}  {node.name}" if arguments else node.name)
+    return CommandStatus.success
+
+
+def execute_cd(arguments, vfs):
+    """Меняет текущий каталог; без аргумента переходит в корень."""
+    if len(arguments) > single_argument:
+        raise VfsError("используйте cd [каталог]")
+    vfs.change_directory(arguments[0] if arguments else "/")
     return CommandStatus.success
 
 
 def execute_command(args, vfs=None):
-    """Выполняет команду текущего этапа."""
+    """Проверяет команду и преобразует ошибки VFS в статус."""
     if not args:
         return CommandStatus.success
+    vfs = vfs if vfs is not None else VirtualFileSystem()
     command, arguments = args[0], args[1:]
     if command == "exit" and not arguments:
         return CommandStatus.exit
-    if command in ("ls", "cd"):
-        return execute_stub(arguments, command)
-    print(f"Ошибка: неизвестная команда или аргументы '{command}'")
-    return CommandStatus.error
+    handlers = {
+        "ls": lambda: execute_ls(arguments, vfs),
+        "cd": lambda: execute_cd(arguments, vfs),
+    }
+    try:
+        if command in handlers:
+            return handlers[command]()
+        raise VfsError(f"неизвестная команда или аргументы '{command}'")
+    except VfsError as error:
+        print(f"Ошибка: {error}")
+        return CommandStatus.error
 
 
 def execute_line(command, vfs=None):
@@ -86,7 +108,13 @@ def main():
     config = parse_arguments()
     print(f"VFS: {config.vfs}")
     print(f"Script: {config.script}")
-    vfs = None
+    vfs = VirtualFileSystem()
+    if config.vfs:
+        try:
+            vfs.load(config.vfs)
+        except VfsError as error:
+            print(f"Ошибка загрузки VFS: {error}")
+            return 1
     if config.script:
         status = run_startup_script(config.script, vfs)
         if status == CommandStatus.error:

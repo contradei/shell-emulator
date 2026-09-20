@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<vfs name="/">
+    <directory name="home">
+        <file name="broken.bin" encoding="base64">
+            THIS IS NOT BASE64!!!
+        </file>
+    </directory>
+</vfs>

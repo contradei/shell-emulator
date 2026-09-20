@@ -62,3 +62,28 @@ class TestParameters(unittest.TestCase):
         self.assertIn("Script:", result.stdout)
         self.assertIn("$ ls", result.stdout)
         self.assertIn("$ exit", result.stdout)
+
+
+class TestVfsCli(unittest.TestCase):
+    """Проверяет настоящие сценарии startup и ошибки загрузки."""
+
+    def test_demo(self):
+        """Демонстрация всех успешных команд завершается успешно."""
+        result = subprocess.run(
+            [sys.executable, "-m", "src.shell_emulator.main", "--vfs",
+             "vfs/several_files.xml", "--script", "startup.txt"],
+            input="", text=True, capture_output=True, timeout=10,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+
+    def test_load_errors(self):
+        """Ошибки VFS дают код 1 и не запускают REPL."""
+        for name in ("missing", "invalid", "invalid_base64"):
+            result = subprocess.run(
+                [sys.executable, "-m", "src.shell_emulator.main", "--vfs",
+                 f"vfs/{name}.xml"], input="never_run\nexit\n", text=True,
+                capture_output=True, timeout=10,
+            )
+            self.assertEqual(result.returncode, 1)
+            self.assertNotIn("never_run", result.stdout)
+            self.assertNotIn("Traceback", result.stderr)

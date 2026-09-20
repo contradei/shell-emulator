@@ -1,4 +1,9 @@
 ls
-cd "my folder"
+ls -l
+cd home
 ls
+cd .
+cd ..
+cd /home
+cd
 exit

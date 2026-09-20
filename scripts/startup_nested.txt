@@ -1,0 +1,6 @@
+ls
+cd home/user/documents
+ls
+cd ../../..
+ls
+exit
