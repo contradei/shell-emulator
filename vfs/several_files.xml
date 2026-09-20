@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<vfs name="/">
+    <directory name="home">
+        <file name="hello.txt">Hello world</file>
+        <file name="readme.txt">This is a virtual file.</file>
+    </directory>
+    <directory name="tmp">
+        <file name="test.txt">Temporary file</file>
+    </directory>
+</vfs>

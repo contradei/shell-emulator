@@ -4,6 +4,7 @@ from enum import Enum
 
 from src.shell_emulator.config import parse_arguments
 from src.shell_emulator.parser import parse_command
+from src.shell_emulator.vfs import VirtualFileSystem, VfsError
 
 
 class CommandStatus(Enum):
@@ -21,7 +22,7 @@ def create_prompt():
     return f"{username}@{hostname}:~$ "
 
 
-def execute_command(args):
+def execute_command(args, vfs):
 
     if not args:
         return CommandStatus.SUCCESS
@@ -33,20 +34,28 @@ def execute_command(args):
         return CommandStatus.EXIT
 
     if command == "ls":
-        print("Команда: ls")
-        print(f"Аргументы: {arguments}")
+        for node in vfs.list_directory():
+            print(node.name)
+
         return CommandStatus.SUCCESS
 
     if command == "cd":
-        print("Команда: cd")
-        print(f"Аргументы: {arguments}")
+        if not arguments:
+            return CommandStatus.SUCCESS
+
+        try:
+            vfs.change_directory(arguments[0])
+        except VfsError as error:
+            print(f"Ошибка: {error}")
+            return CommandStatus.ERROR
+
         return CommandStatus.SUCCESS
 
     print(f"Ошибка: неизвестная команда '{command}'")
     return CommandStatus.ERROR
 
 
-def run_startup_script(path):
+def run_startup_script(path, vfs):
 
     try:
         with open(path, encoding="utf-8") as script:
@@ -67,7 +76,7 @@ def run_startup_script(path):
                     )
                     return CommandStatus.ERROR
 
-                status = execute_command(args)
+                status = execute_command(args, vfs)
 
                 if status == CommandStatus.ERROR:
                     print(
@@ -87,14 +96,22 @@ def run_startup_script(path):
 
 
 def main():
-
     config = parse_arguments()
 
-    print(f"VFS: {config.vfs}")
+    vfs = VirtualFileSystem()
+
+    if config.vfs:
+        try:
+            vfs.load(config.vfs)
+            print(f"VFS загружена: {config.vfs}")
+        except VfsError as error:
+            print(f"Ошибка загрузки VFS: {error}")
+            return
+
     print(f"Script: {config.script}")
 
     if config.script:
-        status = run_startup_script(config.script)
+        status = run_startup_script(config.script, vfs)
 
         if status == CommandStatus.EXIT:
             return
@@ -108,7 +125,7 @@ def main():
         if args is None:
             continue
 
-        status = execute_command(args)
+        status = execute_command(args, vfs)
 
         if status == CommandStatus.EXIT:
             break

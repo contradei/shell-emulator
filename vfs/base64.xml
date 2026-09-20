@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<vfs name="/">
+    <directory name="home">
+        <file name="hello.txt">Hello world</file>
+        <file name="data.bin" encoding="base64">
+            SGVsbG8gZnJvbSBCYXNlNjQ=
+        </file>
+    </directory>
+</vfs>

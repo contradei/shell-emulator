@@ -1,5 +1,8 @@
 ls
-cd "folder with spaces"
+cd home
+ls
+cd ..
+ls
 unknown_command
 ls
-cd test
+exit
