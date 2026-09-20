@@ -118,3 +118,23 @@ class TestStartup(unittest.TestCase):
                 path.write_bytes(b"\xff\xfe\xff")
                 self.assertEqual(main.run_startup_script(path),
                                  main.CommandStatus.error)
+
+    def test_script_success_output(self):
+        """Успешные команды показывают ввод и завершаются без ошибки."""
+        status, output = self.run_script("ls\ncd .\n")
+        self.assertEqual(status, main.CommandStatus.success)
+        self.assertIn("$ ls", output)
+        self.assertIn("$ cd .", output)
+
+    def test_script_bom(self):
+        """UTF-8 BOM в Windows-скрипте не становится частью команды."""
+        status, output = self.run_script("\ufeffexit\nnever_run\n")
+        self.assertEqual(status, main.CommandStatus.exit)
+        self.assertNotIn("never_run", output)
+
+    def test_script_reports_physical_line(self):
+        """Пустые строки не смещают номер ошибочной команды."""
+        status, output = self.run_script("\n\nbad\nnever_run\n")
+        self.assertEqual(status, main.CommandStatus.error)
+        self.assertIn("строка 3", output)
+        self.assertNotIn("never_run", output)
