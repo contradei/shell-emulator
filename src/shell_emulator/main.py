@@ -1,11 +1,12 @@
 import getpass
 import socket
-from pathlib import Path
 
+from src.shell_emulator.config import parse_arguments
 from src.shell_emulator.parser import parse_command
 
 
 def create_prompt():
+
     username = getpass.getuser()
     hostname = socket.gethostname()
 
@@ -13,6 +14,7 @@ def create_prompt():
 
 
 def execute_command(args):
+
     if not args:
         return True
 
@@ -37,6 +39,12 @@ def execute_command(args):
 
 
 def main():
+
+    config = parse_arguments()
+
+    print(f"VFS: {config.vfs}")
+    print(f"Script: {config.script}")
+
     while True:
         prompt = create_prompt()
         command = input(prompt)
