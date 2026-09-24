@@ -110,3 +110,55 @@ class TestVfs(unittest.TestCase):
                              main.CommandStatus.error)
         self.assertIn("home", output.getvalue())
         self.assertEqual(vfs.get_current_path(), "/home")
+
+
+class TestTextCommands(unittest.TestCase):
+    """Проверяет head, tail, history и ошибки их аргументов."""
+
+    def test_head_tail(self):
+        """Head/tail выбирают правильные десять строк из 15."""
+        vfs = sample_vfs()
+        vfs.resolve("/home/lines.txt").data = "\n".join(
+            str(number) for number in range(15)
+        ).encode("utf-8")
+        for command, expected in (("head", range(10)), ("tail", range(5, 15))):
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                status = main.execute_line(f"{command} /home/lines.txt", vfs)
+            self.assertEqual(status, main.CommandStatus.success)
+            self.assertEqual(output.getvalue().splitlines(),
+                             [str(number) for number in expected])
+
+    def test_text_errors(self):
+        """Отсутствие файла, каталог, binary и аргументы дают ошибку."""
+        vfs = sample_vfs()
+        vfs.resolve("/home/hello.txt").data = b"\xff"
+        commands = ("head", "tail", "head missing", "tail /home",
+                    "head /home/hello.txt", "head a b", "history extra",
+                    "ls bad", "cd a b", "exit bad")
+        with contextlib.redirect_stdout(io.StringIO()):
+            for command in commands:
+                with self.subTest(command=command):
+                    self.assertEqual(main.execute_line(command, vfs),
+                                     main.CommandStatus.error)
+
+    def test_empty_and_short_text(self):
+        """Короткие и пустые файлы обрабатываются без лишних строк."""
+        vfs = sample_vfs()
+        for content in (b"", b"one\ntwo\n"):
+            vfs.resolve("/home/hello.txt").data = content
+            for command in ("head", "tail"):
+                output = io.StringIO()
+                with contextlib.redirect_stdout(output):
+                    main.execute_line(f"{command} /home/hello.txt", vfs)
+                self.assertEqual(output.getvalue(), content.decode())
+
+    def test_history(self):
+        """История содержит ошибки, команды и сам вызов history."""
+        main.command_history.clear()
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            main.execute_line("bad", sample_vfs())
+            main.execute_line("history", sample_vfs())
+        self.assertIn("1  bad", output.getvalue())
+        self.assertIn("2  history", output.getvalue())

@@ -6,4 +6,7 @@ cd .
 cd ..
 cd /home
 cd
+head /home/lines.txt
+tail /home/lines.txt
+history
 exit

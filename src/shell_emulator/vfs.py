@@ -101,9 +101,12 @@ class VirtualFileSystem:
                 return child
         raise VfsError(f"Файл или каталог не найден: {name}")
 
-    def list_directory(self):
-        """Возвращает элементы текущего каталога."""
-        return list(self.current_directory.children)
+    def list_directory(self, path="."):
+        """Возвращает элементы указанного каталога без смены текущего."""
+        node = self.resolve(path)
+        if node.node_type != "directory":
+            raise VfsError(f"Не является каталогом: {path}")
+        return list(node.children)
 
     def change_directory(self, path):
         """Переходит в каталог, сохраняя состояние при ошибке."""
@@ -127,3 +130,10 @@ class VirtualFileSystem:
             return base64.b64decode(value, validate=True)
         except ValueError as error:
             raise VfsError("Некорректные данные Base64") from error
+
+    def get_file(self, path):
+        """Возвращает файл по пути внутри VFS."""
+        node = self.resolve(path)
+        if node.node_type != "file":
+            raise VfsError(f"Не является файлом: {path}")
+        return node
