@@ -1,0 +1,2 @@
+head /binary.bin
+never_run

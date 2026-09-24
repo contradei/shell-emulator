@@ -1,5 +1,3 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
 <vfs name="/">
     <directory name="home">
         <file name="hello.txt" encoding="base64">
@@ -8,7 +6,13 @@
         <file name="readme.txt" encoding="base64">
             VGhpcyBpcyBhIHZpcnR1YWwgZmlsZS4=
         </file>
+        <file name="lines.txt" encoding="base64">
+            TGluZSAxCkxpbmUgMgpMaW5lIDMKTGluZSA0CkxpbmUgNQpMaW5lIDYKTGluZSA3
+            CkxpbmUgOApMaW5lIDkKTGluZSAxMApMaW5lIDExCkxpbmUgMTIKTGluZSAxMwpM
+            aW5lIDE0CkxpbmUgMTU=
+        </file>
     </directory>
+
     <directory name="tmp">
         <file name="test.txt" encoding="base64">
             VGVtcG9yYXJ5IGZpbGU=

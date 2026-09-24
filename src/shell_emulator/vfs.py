@@ -127,3 +127,10 @@ class VirtualFileSystem:
             return base64.b64decode(value, validate=True)
         except ValueError as error:
             raise VfsError("Некорректные данные Base64") from error
+
+    def get_file(self, path):
+        """Возвращает файл по пути внутри VFS."""
+        node = self.resolve(path)
+        if node.node_type != "file":
+            raise VfsError(f"Не является файлом: {path}")
+        return node

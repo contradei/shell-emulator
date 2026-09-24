@@ -9,6 +9,9 @@ from src.shell_emulator.parser import parse_command
 from src.shell_emulator.vfs import VirtualFileSystem, VfsError
 
 
+command_history = []
+
+
 single_argument = 1
 
 
@@ -42,6 +45,28 @@ def execute_cd(arguments, vfs):
     return CommandStatus.success
 
 
+def execute_text(arguments, vfs, from_end=False):
+    """Выводит первые или последние десять строк UTF-8 файла."""
+    if len(arguments) != single_argument:
+        raise VfsError("укажите один файл")
+    try:
+        lines = vfs.get_file(arguments[0]).data.decode("utf-8").splitlines()
+    except UnicodeDecodeError as error:
+        raise VfsError("файл не является текстовым") from error
+    for line in (lines[-10:] if from_end else lines[:10]):
+        print(line)
+    return CommandStatus.success
+
+
+def execute_history(arguments):
+    """Выводит историю с номерами, включая сам вызов history."""
+    if arguments:
+        raise VfsError("history не принимает аргументы")
+    for number, command in enumerate(command_history, start=1):
+        print(f"{number}  {command}")
+    return CommandStatus.success
+
+
 def execute_command(args, vfs=None):
     """Проверяет команду и преобразует ошибки VFS в статус."""
     if not args:
@@ -53,6 +78,9 @@ def execute_command(args, vfs=None):
     handlers = {
         "ls": lambda: execute_ls(arguments, vfs),
         "cd": lambda: execute_cd(arguments, vfs),
+        "head": lambda: execute_text(arguments, vfs),
+        "tail": lambda: execute_text(arguments, vfs, True),
+        "history": lambda: execute_history(arguments),
     }
     try:
         if command in handlers:
@@ -65,6 +93,8 @@ def execute_command(args, vfs=None):
 
 def execute_line(command, vfs=None):
     """Разбирает строку и возвращает результат выполнения."""
+    if command.strip():
+        command_history.append(command)
     args = parse_command(command)
     if args is None:
         return CommandStatus.error
@@ -105,6 +135,7 @@ def run_startup_script(path, vfs=None):
 
 def main():
     """Печатает конфигурацию, выполняет startup, затем запускает REPL."""
+    command_history.clear()
     config = parse_arguments()
     print(f"VFS: {config.vfs}")
     print(f"Script: {config.script}")
