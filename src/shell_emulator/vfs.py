@@ -82,6 +82,25 @@ class VirtualFileSystem:
 
         return self.current_directory.children
 
+    def get_file(self, name):
+        """Возвращает файл из текущего каталога."""
+
+        if self.current_directory is None:
+            raise VfsError("VFS не загружена")
+
+        for child in self.current_directory.children:
+            if child.name == name:
+                if child.node_type != "file":
+                    raise VfsError(
+                        f"Не является файлом: {name}"
+                    )
+
+                return child
+
+        raise VfsError(
+            f"Файл не найден: {name}"
+        )
+
     def change_directory(self, name):
         """Переходит в указанный каталог."""
 

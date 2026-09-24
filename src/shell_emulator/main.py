@@ -13,6 +13,7 @@ class CommandStatus(Enum):
     ERROR = "error"
     EXIT = "exit"
 
+command_history = []
 
 def create_prompt():
 
@@ -51,8 +52,63 @@ def execute_command(args, vfs):
 
         return CommandStatus.SUCCESS
 
+    if command == "history":
+        for number, history_command in enumerate(
+                command_history,
+                start=1
+        ):
+            print(f"{number}  {history_command}")
+
+        return CommandStatus.SUCCESS
+
+    if command == "head":
+        if not arguments:
+            print("Ошибка: укажите имя файла")
+            return CommandStatus.ERROR
+
+        try:
+            file = vfs.get_file(arguments[0])
+            text = file.data.decode("utf-8")
+        except VfsError as error:
+            print(f"Ошибка: {error}")
+            return CommandStatus.ERROR
+        except UnicodeDecodeError:
+            print("Ошибка: файл не является текстовым")
+            return CommandStatus.ERROR
+
+        lines = text.splitlines()
+
+        for line in lines[:10]:
+            print(line)
+
+        return CommandStatus.SUCCESS
+
+    if command == "tail":
+        if not arguments:
+            print("Ошибка: укажите имя файла")
+            return CommandStatus.ERROR
+
+        try:
+            file = vfs.get_file(arguments[0])
+            text = file.data.decode("utf-8")
+        except VfsError as error:
+            print(f"Ошибка: {error}")
+            return CommandStatus.ERROR
+        except UnicodeDecodeError:
+            print("Ошибка: файл не является текстовым")
+            return CommandStatus.ERROR
+
+        lines = text.splitlines()
+
+        for line in lines[-10:]:
+            print(line)
+
+        return CommandStatus.SUCCESS
+
     print(f"Ошибка: неизвестная команда '{command}'")
     return CommandStatus.ERROR
+
+
 
 
 def run_startup_script(path, vfs):
@@ -64,7 +120,7 @@ def run_startup_script(path, vfs):
 
                 if not command:
                     continue
-
+                command_history.append(command)
                 print(f"{create_prompt()}{command}")
 
                 args = parse_command(command)
@@ -118,7 +174,10 @@ def main():
 
     while True:
         prompt = create_prompt()
+
         command = input(prompt)
+        if command.strip():
+            command_history.append(command)
 
         args = parse_command(command)
 

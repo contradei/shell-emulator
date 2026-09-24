@@ -1,8 +1,11 @@
 ls
 cd home
 ls
+head lines.txt
+tail lines.txt
+history
 cd ..
 ls
-unknown_command
+cd home
+head missing.txt
 ls
-exit
