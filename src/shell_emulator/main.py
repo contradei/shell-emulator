@@ -13,6 +13,7 @@ command_history = []
 
 
 single_argument = 1
+owner_arguments = 2
 
 
 class CommandStatus(Enum):
@@ -67,6 +68,14 @@ def execute_history(arguments):
     return CommandStatus.success
 
 
+def execute_chown(arguments, vfs):
+    """Изменяет владельца узла только в оперативной памяти."""
+    if len(arguments) != owner_arguments or not arguments[0]:
+        raise VfsError("используйте chown <владелец> <путь>")
+    vfs.change_owner(arguments[1], arguments[0])
+    return CommandStatus.success
+
+
 def execute_command(args, vfs=None):
     """Проверяет команду и преобразует ошибки VFS в статус."""
     if not args:
@@ -81,6 +90,7 @@ def execute_command(args, vfs=None):
         "head": lambda: execute_text(arguments, vfs),
         "tail": lambda: execute_text(arguments, vfs, True),
         "history": lambda: execute_history(arguments),
+        "chown": lambda: execute_chown(arguments, vfs),
     }
     try:
         if command in handlers:

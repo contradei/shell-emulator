@@ -23,6 +23,10 @@ call run.bat --vfs vfs/several_files.xml --script scripts/error_history_argument
 if not errorlevel 1 exit /b 1
 call run.bat --vfs vfs/binary.xml --script scripts/error_binary.txt <nul
 if not errorlevel 1 exit /b 1
+call run.bat --vfs vfs/several_files.xml --script scripts/error_chown_missing.txt <nul
+if not errorlevel 1 exit /b 1
+call run.bat --vfs vfs/several_files.xml --script scripts/error_chown_arguments.txt <nul
+if not errorlevel 1 exit /b 1
 call run.bat --vfs vfs/missing.xml <nul
 if not errorlevel 1 exit /b 1
 call run.bat --vfs vfs/invalid.xml <nul

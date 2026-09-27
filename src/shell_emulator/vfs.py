@@ -134,3 +134,7 @@ class VirtualFileSystem:
         if node.node_type != "file":
             raise VfsError(f"Не является файлом: {path}")
         return node
+
+    def change_owner(self, path, owner):
+        """Изменяет владельца файла или каталога только в памяти."""
+        self.resolve(path).owner = owner

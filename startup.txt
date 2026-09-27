@@ -9,4 +9,10 @@ cd
 head /home/lines.txt
 tail /home/lines.txt
 history
+chown Roman /home/hello.txt
+chown Roman /home
+cd home
+ls -l
+cd /
+ls -l
 exit
