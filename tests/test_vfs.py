@@ -162,3 +162,29 @@ class TestTextCommands(unittest.TestCase):
             main.execute_line("history", sample_vfs())
         self.assertIn("1  bad", output.getvalue())
         self.assertIn("2  history", output.getvalue())
+
+
+class TestChown(unittest.TestCase):
+    """Проверяет chown, каталоги и неизменность исходного XML."""
+
+    def test_owner_only_in_memory(self):
+        """Владелец меняется в памяти и не переносится в новую VFS."""
+        path = Path("vfs/several_files.xml")
+        before = path.read_bytes()
+        vfs = sample_vfs()
+        for name in ("/home/hello.txt", "/home"):
+            status = main.execute_line(f'chown "New Owner" {name}', vfs)
+            self.assertEqual(status, main.CommandStatus.success)
+            self.assertEqual(vfs.resolve(name).owner, "New Owner")
+            self.assertEqual(sample_vfs().resolve(name).owner, "root")
+        self.assertEqual(path.read_bytes(), before)
+
+    def test_chown_errors(self):
+        """Неверные аргументы и отсутствующий путь дают ошибку."""
+        vfs = sample_vfs()
+        with contextlib.redirect_stdout(io.StringIO()):
+            for command in ("chown", "chown a", "chown a b c",
+                            "chown a missing", 'chown "" /home'):
+                with self.subTest(command=command):
+                    self.assertEqual(main.execute_line(command, vfs),
+                                     main.CommandStatus.error)
